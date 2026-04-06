@@ -15,8 +15,8 @@ class _ReportPageState extends State<ReportPage> {
   String? _issueType;
   String? _urgency;
   String _description = '';
-  String _location = '';
   bool _isSubmitting = false;
+
   String _locationText = '';
   double? _latitude;
   double? _longitude;
@@ -25,49 +25,64 @@ class _ReportPageState extends State<ReportPage> {
   final List<String> _issueTypes = ['Food', 'Medical', 'Shelter', 'Other'];
   final List<String> _urgencyLevels = ['Low', 'Medium', 'High'];
 
+  // 🔥 SUBMIT TO FIRESTORE
   Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      setState(() => _isSubmitting = true);
+    if (!_formKey.currentState!.validate()) return;
 
-      try {
-        await FirebaseFirestore.instance.collection('reports').add({
-          'issueType': _issueType,
-          'urgency': _urgency,
-          'description': _description,
-          'location': _location,
-          'timestamp': FieldValue.serverTimestamp(),
+    if (_latitude == null || _longitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fetch location first')),
+      );
+      return;
+    }
+
+    _formKey.currentState!.save();
+    setState(() => _isSubmitting = true);
+
+    try {
+      await FirebaseFirestore.instance.collection('reports').add({
+        'issueType': _issueType,
+        'urgency': _urgency,
+        'description': _description,
+        'lat': _latitude,
+        'lng': _longitude,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Report submitted successfully!')),
+        );
+
+        _formKey.currentState!.reset();
+        setState(() {
+          _issueType = null;
+          _urgency = null;
+          _locationText = '';
+          _latitude = null;
+          _longitude = null;
         });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Report submitted successfully!')),
-          );
-          _formKey.currentState!.reset();
-          setState(() {
-            _issueType = null;
-            _urgency = null;
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${e.toString()}')),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isSubmitting = false);
-        }
       }
-  // 📍 GET LOCATION FUNCTION
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  // 📍 GET LOCATION
   Future<void> _getLocation() async {
     setState(() => _isFetchingLocation = true);
 
     bool serviceEnabled;
     LocationPermission permission;
 
-    // Check if location services are enabled
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -77,7 +92,6 @@ class _ReportPageState extends State<ReportPage> {
       return;
     }
 
-    // Request permission
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -98,7 +112,6 @@ class _ReportPageState extends State<ReportPage> {
       return;
     }
 
-    // Get position
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
@@ -110,32 +123,6 @@ class _ReportPageState extends State<ReportPage> {
           "Lat: ${_latitude!.toStringAsFixed(4)}, Lng: ${_longitude!.toStringAsFixed(4)}";
       _isFetchingLocation = false;
     });
-  }
-
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-
-      if (_latitude == null || _longitude == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fetch location first')),
-        );
-        return;
-      }
-
-      // 👉 THIS is what you'll send to Firebase later
-      print({
-        "issueType": _issueType,
-        "urgency": _urgency,
-        "description": _description,
-        "lat": _latitude,
-        "lng": _longitude,
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Report submitted!')));
-    }
   }
 
   @override
@@ -184,10 +171,9 @@ class _ReportPageState extends State<ReportPage> {
             ),
             const SizedBox(height: 16),
 
-            // 📍 LOCATION SECTION (UPDATED)
+            // 📍 Location
             const Text("Location"),
             const SizedBox(height: 8),
-
             Row(
               children: [
                 Expanded(
@@ -232,6 +218,7 @@ class _ReportPageState extends State<ReportPage> {
                   : null,
               onSaved: (val) => _description = val!,
             ),
+
             const SizedBox(height: 24),
 
             // Submit Button
