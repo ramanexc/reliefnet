@@ -8,6 +8,10 @@ environment:
   sdk: ^3.11.4
 
 dependencies:
+  provider: ^6.1.2
+  shared_preferences: ^2.3.3
+  geolocator: ^10.1.0
+  permission_handler: ^11.3.0
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8

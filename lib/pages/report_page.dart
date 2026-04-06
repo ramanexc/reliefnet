@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
 
 class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
@@ -16,6 +17,10 @@ class _ReportPageState extends State<ReportPage> {
   String _description = '';
   String _location = '';
   bool _isSubmitting = false;
+  String _locationText = '';
+  double? _latitude;
+  double? _longitude;
+  bool _isFetchingLocation = false;
 
   final List<String> _issueTypes = ['Food', 'Medical', 'Shelter', 'Other'];
   final List<String> _urgencyLevels = ['Low', 'Medium', 'High'];
@@ -55,6 +60,81 @@ class _ReportPageState extends State<ReportPage> {
           setState(() => _isSubmitting = false);
         }
       }
+  // 📍 GET LOCATION FUNCTION
+  Future<void> _getLocation() async {
+    setState(() => _isFetchingLocation = true);
+
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location services are disabled')),
+      );
+      setState(() => _isFetchingLocation = false);
+      return;
+    }
+
+    // Request permission
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permission denied')),
+        );
+        setState(() => _isFetchingLocation = false);
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location permission permanently denied')),
+      );
+      setState(() => _isFetchingLocation = false);
+      return;
+    }
+
+    // Get position
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    setState(() {
+      _latitude = position.latitude;
+      _longitude = position.longitude;
+      _locationText =
+          "Lat: ${_latitude!.toStringAsFixed(4)}, Lng: ${_longitude!.toStringAsFixed(4)}";
+      _isFetchingLocation = false;
+    });
+  }
+
+  void _submitForm() {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+
+      if (_latitude == null || _longitude == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fetch location first')),
+        );
+        return;
+      }
+
+      // 👉 THIS is what you'll send to Firebase later
+      print({
+        "issueType": _issueType,
+        "urgency": _urgency,
+        "description": _description,
+        "lat": _latitude,
+        "lng": _longitude,
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Report submitted!')));
     }
   }
 
@@ -104,18 +184,38 @@ class _ReportPageState extends State<ReportPage> {
             ),
             const SizedBox(height: 16),
 
-            // Location
+            // 📍 LOCATION SECTION (UPDATED)
             const Text("Location"),
             const SizedBox(height: 8),
-            TextFormField(
-              decoration: const InputDecoration(
-                hintText: "Enter location",
-                border: OutlineInputBorder(),
-              ),
-              validator: (val) =>
-                  val == null || val.isEmpty ? 'Please enter a location' : null,
-              onSaved: (val) => _location = val!,
+
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      hintText: "Fetch your location",
+                      border: OutlineInputBorder(),
+                    ),
+                    controller: TextEditingController(text: _locationText),
+                    validator: (val) =>
+                        _latitude == null ? 'Please fetch location' : null,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: _isFetchingLocation ? null : _getLocation,
+                  child: _isFetchingLocation
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.my_location),
+                ),
+              ],
             ),
+
             const SizedBox(height: 16),
 
             // Description
