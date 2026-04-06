@@ -1,23 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:reliefnet/pages/dashboard_page.dart';
 import 'package:reliefnet/pages/home_page.dart';
 import 'package:reliefnet/pages/report_page.dart';
 import 'package:reliefnet/pages/volunteer_page.dart';
-import 'package:reliefnet/themes/theme_light.dart';
-import 'package:reliefnet/themes/theme_dark.dart';
-import 'package:reliefnet/themes/theme_provider.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
-      child: const MyApp(),
-    ),
-  );
+void main() {
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -25,17 +13,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const Homepage(),
-      theme: lightmode,
-      darkTheme: darkmode,
-      themeMode: themeProvider.themeMode,
+      home: Homepage(),
+      // maybe of help later
       routes: {
-        '/report': (context) => const ReportPage(),
-        '/dashboard': (context) => const DashboardPage(),
-        '/volunteer': (context) => const VolunteerPage(),
+        '/report': (context) => ReportPage(),
+        '/dashboard': (context) => DashboardPage(),
+        '/volunteer': (context) => VolunteerPage(),
       },
     );
   }
