@@ -6,8 +6,21 @@ ThemeData darkmode = ThemeData(
   scaffoldBackgroundColor: const Color(0xFF111827),
   fontFamily: 'Poppins',
   textTheme: const TextTheme(
-    bodyLarge: TextStyle(color: Color(0xFFF9FAFB)),
-    bodyMedium: TextStyle(color: Color(0xFFD1D5DB)),
+    bodyLarge: TextStyle(
+      color: Color(0xFF111827),
+      fontSize: 20,
+      fontWeight: FontWeight.bold,
+    ),
+    bodyMedium: TextStyle(
+      color: Color(0xFF374151),
+      fontSize: 14,
+      fontWeight: FontWeight.normal,
+    ),
+    bodySmall: TextStyle(
+      color: Color(0xFF9CA3AF),
+      fontSize: 12,
+      fontWeight: FontWeight.normal,
+    ),
   ),
   colorScheme: ColorScheme.dark(
     surface: const Color(0xFF111827),
