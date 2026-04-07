@@ -6,8 +6,6 @@ import 'package:reliefnet/pages/dashboard_page.dart';
 import 'package:reliefnet/pages/home_page.dart';
 import 'package:reliefnet/pages/report_page.dart';
 import 'package:reliefnet/pages/volunteer_page.dart';
-import 'package:reliefnet/themes/theme_dark.dart';
-import 'package:reliefnet/themes/theme_light.dart';
 import 'package:reliefnet/themes/theme_provider.dart';
 
 void main() async {
@@ -32,8 +30,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
 
-      theme: lightmode,
-      darkTheme: darkmode,
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
       themeMode:
           themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
 
