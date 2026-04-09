@@ -52,25 +52,25 @@ ThemeData darkmode = ThemeData(
     filled: true,
     fillColor: const Color(0xFF1E293B),
 
-    hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
 
-    labelStyle: const TextStyle(color: Color(0xFFCBD5F5)),
+    labelStyle: const TextStyle(color: Color(0xFFCBD5F5), fontSize: 14),
 
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       borderSide: BorderSide.none,
     ),
 
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       borderSide: BorderSide.none,
     ),
 
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5),
+      borderRadius: BorderRadius.circular(10),
+      borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.2),
     ),
 
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
   ),
 );
