@@ -47,32 +47,30 @@ ThemeData lightmode = ThemeData(
   ),
 
   inputDecorationTheme: InputDecorationTheme(
-    filled: true,
-    fillColor: const Color(0xFFFFFFFF), // 🔥 pure white for contrast
+    filled: false, // 🔥 remove box heaviness
 
-    hintStyle: const TextStyle(
-      color: Color(0xFF64748B), // slightly darker
-    ),
+    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
 
-    labelStyle: const TextStyle(color: Color(0xFF475569)),
+    labelStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
 
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(
-        color: Color(0xFFE2E8F0), // subtle border
-      ),
+      borderRadius: BorderRadius.circular(10),
+      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
     ),
 
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
     ),
 
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5),
+      borderRadius: BorderRadius.circular(10),
+      borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.2),
     ),
 
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    contentPadding: const EdgeInsets.symmetric(
+      horizontal: 14,
+      vertical: 12, // 🔥 reduced height
+    ),
   ),
 );

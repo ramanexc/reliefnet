@@ -7,7 +7,7 @@ import 'package:reliefnet/pages/dashboard_page.dart';
 import 'package:reliefnet/pages/home_page.dart';
 import 'package:reliefnet/pages/report_page.dart';
 import 'package:reliefnet/pages/volunteer_page.dart';
-import 'package:reliefnet/pages/login_page.dart';
+import 'package:reliefnet/login-signup/login_page.dart';
 import 'package:reliefnet/themes/theme_light.dart';
 import 'package:reliefnet/themes/theme_dark.dart';
 import 'package:reliefnet/themes/theme_provider.dart';

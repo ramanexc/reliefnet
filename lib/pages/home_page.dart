@@ -6,6 +6,7 @@ import 'package:reliefnet/pages/report_page.dart';
 import 'package:reliefnet/pages/settings_page.dart';
 import 'package:reliefnet/pages/volunteer_page.dart';
 import 'package:reliefnet/components/appBar.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -45,9 +46,7 @@ class _HomepageState extends State<Homepage> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBarComponent(
-        appBarText: _pageTitles[selectedindex],
-      ),
+      appBar: AppBarComponent(appBarText: _pageTitles[selectedindex]),
 
       body: _pages[selectedindex],
 
@@ -62,10 +61,7 @@ class _HomepageState extends State<Homepage> {
                 children: [
                   Image.asset("assets/images/logo.png", height: 80),
                   const SizedBox(height: 10),
-                  Text(
-                    "ReliefNet",
-                    style: textTheme.bodyLarge,
-                  ),
+                  Text("ReliefNet", style: textTheme.bodyLarge),
                 ],
               ),
             ),
@@ -75,7 +71,6 @@ class _HomepageState extends State<Homepage> {
             _buildTile(Icons.report_outlined, "Report", 1, textTheme),
             _buildTile(Icons.dashboard_outlined, "Dashboard", 2, textTheme),
             _buildTile(Icons.help_outline, "Volunteer", 3, textTheme),
-
 
             /// 🔹 Secondary Items
             _buildTile(Icons.person_outline, "Profile", 4, textTheme),
@@ -102,7 +97,11 @@ class _HomepageState extends State<Homepage> {
 
   /// 🔥 Reusable Tile (cleaner code)
   Widget _buildTile(
-      IconData icon, String title, int index, TextTheme textTheme) {
+    IconData icon,
+    String title,
+    int index,
+    TextTheme textTheme,
+  ) {
     return ListTile(
       leading: Icon(icon),
       title: Text(title, style: textTheme.bodyMedium),
@@ -130,6 +129,7 @@ class _HomepageState extends State<Homepage> {
             onPressed: () async {
               Navigator.pop(context);
               await FirebaseAuth.instance.signOut();
+              await GoogleSignIn().signOut();
             },
             child: Text(
               "Logout",
