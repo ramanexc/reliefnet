@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'package:reliefnet/pages/apply_volunteer_page.dart';
 import 'package:reliefnet/pages/dashboard_page.dart';
 import 'package:reliefnet/pages/home_page.dart';
 import 'package:reliefnet/pages/report_page.dart';
@@ -12,7 +13,7 @@ import 'package:reliefnet/themes/theme_light.dart';
 import 'package:reliefnet/themes/theme_dark.dart';
 import 'package:reliefnet/themes/theme_provider.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
@@ -45,6 +46,7 @@ class MyApp extends StatelessWidget {
         '/report': (context) => const ReportPage(),
         '/dashboard': (context) => const DashboardPage(),
         '/volunteer': (context) => const VolunteerPage(),
+        '/apply_volunteer': (context) => const ApplyVolunteerPage(),
       },
 
       /// AUTH HANDLER

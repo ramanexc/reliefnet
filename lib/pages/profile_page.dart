@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -14,10 +15,41 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
+  final _volunteerIdController = TextEditingController();
 
   File? _image;
   final _picker = ImagePicker();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data()!;
+        _nameController.text = data['name'] ?? '';
+        _usernameController.text = data['username'] ?? '';
+        _volunteerIdController.text = data['volunteerId'] ?? '';
+      }
+    } catch (e) {
+      debugPrint("Error loading profile: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _pickImage() async {
     final pickedFile =
@@ -30,6 +62,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _saveProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
     if (_nameController.text.isEmpty ||
         _usernameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,21 +87,28 @@ class _ProfilePageState extends State<ProfilePage> {
         final ref = FirebaseStorage.instance
             .ref()
             .child('profile_pics')
-            .child('${_usernameController.text}.jpg');
+            .child('${user.uid}.jpg');
 
         await ref.putFile(_image!);
         imageUrl = await ref.getDownloadURL();
       }
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(_usernameController.text)
-          .set({
+      final data = {
         'name': _nameController.text,
         'username': _usernameController.text,
-        'profilePic': imageUrl,
+        'volunteerId': _volunteerIdController.text.trim(),
+        'isVolunteer': _volunteerIdController.text.trim().isNotEmpty,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      if (imageUrl != null) {
+        data['profilePic'] = imageUrl;
+      }
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(data, SetOptions(merge: true));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -96,6 +138,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void dispose() {
     _nameController.dispose();
     _usernameController.dispose();
+    _volunteerIdController.dispose();
     super.dispose();
   }
 
@@ -176,6 +219,21 @@ class _ProfilePageState extends State<ProfilePage> {
                 labelText: "Username",
                 labelStyle: textTheme.bodySmall,
                 prefixIcon: const Icon(Icons.alternate_email),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            /// 🔹 Volunteer ID Field
+            TextField(
+              controller: _volunteerIdController,
+              style: textTheme.bodyMedium,
+              decoration: InputDecoration(
+                labelText: "Volunteer ID (Optional)",
+                hintText: "Enter ID to access volunteer features",
+                labelStyle: textTheme.bodySmall,
+                prefixIcon: const Icon(Icons.badge_outlined),
                 border: const OutlineInputBorder(),
               ),
             ),

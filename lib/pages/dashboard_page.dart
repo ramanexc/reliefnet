@@ -452,7 +452,7 @@ class _ReportDetailSheet extends StatelessWidget {
   final IconData issueIcon;
   final String timeAgo;
 
-  bool get _isVolunteer => userProfile?['role'] == 'volunteer';
+  bool get _isVolunteer => userProfile?['isVolunteer'] == true;
 
   String get _status => data['status'] ?? 'unassigned';
 
