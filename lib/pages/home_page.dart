@@ -8,6 +8,8 @@ import 'package:reliefnet/pages/volunteer_page.dart';
 import 'package:reliefnet/components/appBar.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
 
@@ -17,6 +19,30 @@ class Homepage extends StatefulWidget {
 
 class _HomepageState extends State<Homepage> {
   int selectedindex = 0;
+  bool _isVolunteer = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkVolunteerStatus();
+  }
+
+  Future<void> _checkVolunteerStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots()
+          .listen((doc) {
+        if (doc.exists && mounted) {
+          setState(() {
+            _isVolunteer = doc.data()?['isVolunteer'] ?? false;
+          });
+        }
+      });
+    }
+  }
 
   final List<Widget> _pages = const [
     Center(child: Text("Home")),
@@ -69,8 +95,18 @@ class _HomepageState extends State<Homepage> {
             /// 🔹 Main Items
             _buildTile(Icons.home_outlined, "Home", 0, textTheme),
             _buildTile(Icons.report_outlined, "Report", 1, textTheme),
-            _buildTile(Icons.dashboard_outlined, "Dashboard", 2, textTheme),
-            _buildTile(Icons.help_outline, "Volunteer", 3, textTheme),
+            if (_isVolunteer) ...[
+              _buildTile(Icons.dashboard_outlined, "Dashboard", 2, textTheme),
+              _buildTile(Icons.help_outline, "Volunteer", 3, textTheme),
+            ] else
+              ListTile(
+                leading: const Icon(Icons.volunteer_activism_outlined),
+                title: Text("Apply as Volunteer", style: textTheme.bodyMedium),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/apply_volunteer');
+                },
+              ),
 
             /// 🔹 Secondary Items
             _buildTile(Icons.person_outline, "Profile", 4, textTheme),

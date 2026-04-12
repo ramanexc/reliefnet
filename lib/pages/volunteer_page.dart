@@ -33,37 +33,30 @@ class VolunteerPage extends StatelessWidget {
 
           final docs = snapshot.data!.docs;
 
-          final activeTasks = docs.where((d) {
+          final currentTasks = docs.where((d) {
             final status = d['status'];
-            return status != 'completed';
+            return status == 'assigned' || status == 'in_progress' || status == 'reached';
           }).toList();
 
           final completedTasks = docs.where((d) {
             return d['status'] == 'completed';
           }).toList();
 
+          final rejectedTasks = docs.where((d) {
+            return d['status'] == 'rejected';
+          }).toList();
+
+          final textTheme = Theme.of(context).textTheme;
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Active Tasks",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-
-                if (activeTasks.isEmpty)
-                  const Text("No active tasks"),
-
-                ...activeTasks.map((doc) =>
-                    ActiveTaskCard(doc: doc)).toList(),
-
-                const SizedBox(height: 30),
-
-                const Text(
+                /// 🔹 Completed Tasks
+                Text(
                   "Completed Tasks",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 10),
 
@@ -72,6 +65,36 @@ class VolunteerPage extends StatelessWidget {
 
                 ...completedTasks.map((doc) =>
                     CompletedTaskCard(doc: doc)).toList(),
+
+                const SizedBox(height: 30),
+
+                /// 🔹 Tasks in Progress
+                Text(
+                  "Tasks in Progress",
+                  style: textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 10),
+
+                if (currentTasks.isEmpty)
+                  const Text("No tasks in progress"),
+
+                ...currentTasks.map((doc) =>
+                    ActiveTaskCard(doc: doc)).toList(),
+
+                const SizedBox(height: 30),
+
+                /// 🔹 Rejected Tasks
+                Text(
+                  "Rejected Tasks",
+                  style: textTheme.bodyLarge?.copyWith(color: Colors.red),
+                ),
+                const SizedBox(height: 10),
+
+                if (rejectedTasks.isEmpty)
+                  const Text("No rejected tasks"),
+
+                ...rejectedTasks.map((doc) =>
+                    RejectedTaskCard(doc: doc)).toList(),
               ],
             ),
           );
@@ -94,9 +117,19 @@ class ActiveTaskCard extends StatelessWidget {
 
   Widget buildActionButton(String status) {
     if (status == 'assigned') {
-      return ElevatedButton(
-        onPressed: () => updateStatus('in_progress'),
-        child: const Text("On the way"),
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextButton(
+            onPressed: () => updateStatus('rejected'),
+            child: const Text("Reject", style: TextStyle(color: Colors.red)),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () => updateStatus('in_progress'),
+            child: const Text("On the way"),
+          ),
+        ],
       );
     }
 
@@ -212,6 +245,40 @@ class CompletedTaskCard extends StatelessWidget {
                 child: Image.network(proofImage, height: 120),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class RejectedTaskCard extends StatelessWidget {
+  const RejectedTaskCard({super.key, required this.doc});
+
+  final QueryDocumentSnapshot doc;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = doc.data() as Map<String, dynamic>;
+
+    final issue = data['issueType'] ?? 'Unknown';
+    final description = data['description'] ?? '';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: Colors.red.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(issue,
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Text(description),
+            const SizedBox(height: 10),
+            const Text("Status: Rejected", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
