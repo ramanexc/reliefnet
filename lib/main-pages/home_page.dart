@@ -166,7 +166,7 @@ class _HomepageState extends State<Homepage> {
             onPressed: () async {
               Navigator.pop(context);
               await FirebaseAuth.instance.signOut();
-              await GoogleSignIn().signOut();
+              await GoogleSignIn.instance.signOut();
             },
             child: Text(
               "Logout",
