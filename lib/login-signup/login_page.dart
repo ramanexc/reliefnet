@@ -106,7 +106,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _isLoading = true);
 
       final googleSignIn = GoogleSignIn.instance;
-
+      await googleSignIn.initialize();
       final googleUser = await googleSignIn.authenticate();
 
       final googleAuth = googleUser.authentication;

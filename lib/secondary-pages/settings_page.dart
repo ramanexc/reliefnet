@@ -34,8 +34,6 @@ class _SettingsPageState extends State<SettingsPage> {
         // Try to authenticate to enable
         final bool didAuthenticate = await auth.authenticate(
           localizedReason: 'Please authenticate to enable biometric login',
-          useErrorDialogs: true,
-          stickyAuth: true,
           biometricOnly: true,
         );
         if (didAuthenticate) {

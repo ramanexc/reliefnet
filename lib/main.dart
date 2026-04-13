@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:local_auth_android/local_auth_android.dart';
+import 'package:local_auth_darwin/local_auth_darwin.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:reliefnet/l10n/app_translations.dart';
 
@@ -116,8 +118,7 @@ class _SecurityWrapperState extends State<SecurityWrapper> {
       try {
         final bool didAuthenticate = await auth.authenticate(
           localizedReason: 'Authenticate to access ReliefNet',
-          stickyAuth: true,
-          useErrorDialogs: true,
+          biometricOnly: true,
         );
         if (didAuthenticate && mounted) {
           setState(() => _isAuthenticated = true);
