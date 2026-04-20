@@ -8,7 +8,7 @@ import 'package:reliefnet/main-pages/volunteer_page.dart';
 import 'package:reliefnet/main-pages/apply_volunteer_page.dart';
 import 'package:reliefnet/components/app_bar.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
+import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Homepage extends StatefulWidget {
@@ -82,6 +82,19 @@ class _HomepageState extends State<Homepage> {
     setState(() => selectedindex = index);
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
+    }
+  }
+
+  Future<void> _makeCall(String number) async {
+    final Uri uri = Uri(scheme: 'tel', path: number);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        debugPrint('Could not launch dialer for $number');
+      }
+    } catch (e) {
+      debugPrint('Error: $e');
     }
   }
 
@@ -214,6 +227,13 @@ class HomeContent extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    Future<void> _makeCall(String number) async {
+      final Uri uri = Uri(scheme: 'tel', path: number);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -246,7 +266,7 @@ class HomeContent extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.red.shade300.withOpacity(0.4),
+                    color: Colors.red.shade300.withValues(alpha: 0.4),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -257,7 +277,7 @@ class HomeContent extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.report_problem_rounded, color: Colors.white, size: 30),
@@ -283,7 +303,72 @@ class HomeContent extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
+
+          // ── New: Emergency Quick Actions ──────────────────────────
+          const _SectionHeader(title: "Quick Emergency Actions", icon: Icons.bolt_rounded),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _EmergencyActionBtn(
+                icon: Icons.local_police_outlined,
+                label: "Police",
+                color: Colors.blue,
+                onTap: () => _makeCall('100'),
+              ),
+              _EmergencyActionBtn(
+                icon: Icons.medical_services_outlined,
+                label: "Ambulance",
+                color: Colors.red,
+                onTap: () => _makeCall('102'),
+              ),
+              _EmergencyActionBtn(
+                icon: Icons.local_fire_department_outlined,
+                label: "Fire",
+                color: Colors.orange,
+                onTap: () => _makeCall('101'),
+              ),
+              _EmergencyActionBtn(
+                icon: Icons.sos_rounded,
+                label: "SOS",
+                color: Colors.red.shade900,
+                onTap: () => _makeCall('112'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // ── New: Safety Tips Carousel ─────────────────────────────
+          const _SectionHeader(title: "Safety & Preparedness", icon: Icons.security_rounded),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 130,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: const [
+                _SafetyTipCard(
+                  title: "Earthquake Safety",
+                  desc: "Drop, Cover, and Hold On! Stay away from glass.",
+                  icon: Icons.terrain_rounded,
+                  color: Colors.brown,
+                ),
+                _SafetyTipCard(
+                  title: "First Aid Basics",
+                  desc: "Keep a kit ready with bandages, antiseptic, and meds.",
+                  icon: Icons.health_and_safety_rounded,
+                  color: Colors.teal,
+                ),
+                _SafetyTipCard(
+                  title: "Fire Emergency",
+                  desc: "Crawl low under smoke and use stairs, not elevators.",
+                  icon: Icons.fireplace_rounded,
+                  color: Colors.deepOrange,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
 
           // ── 2) Become a Volunteer Banner ──────────────────────────
           if (!isVolunteer)
@@ -291,7 +376,7 @@ class HomeContent extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDark ? Colors.blue.withOpacity(0.12) : Colors.blue.shade50,
+                color: isDark ? Colors.blue.withValues(alpha: 0.12) : Colors.blue.shade50,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isDark ? Colors.blue.shade700 : Colors.blue.shade200,
@@ -329,6 +414,10 @@ class HomeContent extends StatelessWidget {
             ),
 
           if (!isVolunteer) const SizedBox(height: 24),
+
+          // ── New: Community Impact ─────────────────────────────────
+          _ImpactSummaryCard(isDark: isDark),
+          const SizedBox(height: 24),
 
           // ── 3) My Active Reports ──────────────────────────────────
           _SectionHeader(title: "My Active Reports", icon: Icons.list_alt_rounded),
@@ -505,11 +594,20 @@ class _ActiveReportCard extends StatelessWidget {
     final color = _colorForType(issue);
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+      ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.12),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Icon(_iconForType(issue), color: color, size: 22),
         ),
         title: Text(issue, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -529,6 +627,144 @@ class _ActiveReportCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Emergency Action Button ──────────────────────────────────────────────────
+class _EmergencyActionBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _EmergencyActionBtn({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color, size: 26),
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Safety Tip Card ──────────────────────────────────────────────────────────
+class _SafetyTipCard extends StatelessWidget {
+  final String title;
+  final String desc;
+  final IconData icon;
+  final Color color;
+
+  const _SafetyTipCard({
+    required this.title,
+    required this.desc,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: 200,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade900 : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 4),
+          Text(
+            desc,
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Impact Summary Card ──────────────────────────────────────────────────────
+class _ImpactSummaryCard extends StatelessWidget {
+  final bool isDark;
+  const _ImpactSummaryCard({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark 
+            ? [Colors.blueGrey.shade800, Colors.blueGrey.shade900]
+            : [Colors.indigo.shade50, Colors.indigo.shade100],
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          const Text(
+            "Community Impact",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _ImpactStat(label: "Resolved", value: "1.2k", color: Colors.green),
+              _ImpactStat(label: "Volunteers", value: "450+", color: Colors.blue),
+              _ImpactStat(label: "Active", value: "84", color: Colors.orange),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImpactStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _ImpactStat({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+      ],
     );
   }
 }

@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:reliefnet/themes/theme_provider.dart';
+import 'package:reliefnet/themes/locale_provider.dart';
+import 'package:reliefnet/l10n/app_localizations.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -22,19 +24,9 @@ class _SettingsPageState extends State<SettingsPage>
   bool _notifyTaskCompleted = true;
   bool _notifyUrgentOnly = false;
 
-  // ── Language ──────────────────────────────────────────────────────────────
-  String _selectedLanguage = 'English';
-  final List<String> _languages = [
-    'English',
-    'Hindi',
-    'Bengali',
-    'Tamil',
-    'Telugu',
-  ];
-
   // ── State ─────────────────────────────────────────────────────────────────
   bool _isLoading = true;
-  bool _savingNotifs = false;
+  final bool _savingNotifs = false;
   String _appVersion = '';
 
   late final AnimationController _fadeCtrl;
@@ -62,7 +54,6 @@ class _SettingsPageState extends State<SettingsPage>
   Future<void> _loadAll() async {
     await Future.wait([
       _loadNotifPrefs(),
-      _loadLanguagePref(),
       _loadAppVersion(),
     ]);
     if (mounted) {
@@ -95,15 +86,6 @@ class _SettingsPageState extends State<SettingsPage>
     }
   }
 
-  Future<void> _loadLanguagePref() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        _selectedLanguage = prefs.getString('language') ?? 'English';
-      });
-    }
-  }
-
   Future<void> _loadAppVersion() async {
     try {
       final info = await PackageInfo.fromPlatform();
@@ -116,32 +98,37 @@ class _SettingsPageState extends State<SettingsPage>
   // ── Savers ────────────────────────────────────────────────────────────────
 
   Future<void> _saveNotifPref(String key, bool value) async {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  if (uid == null) return;
-  
-  // Remove the _savingNotifs setState here to prevent the UI jump
-  try {
-    await FirebaseFirestore.instance.collection('users').doc(uid).set({
-      'notificationPrefs': {
-        'newReports': _notifyNewReports,
-        'taskAssigned': _notifyTaskAssigned,
-        'taskCompleted': _notifyTaskCompleted,
-        'urgentOnly': _notifyUrgentOnly,
-      },
-    }, SetOptions(merge: true));
-  } catch (e) {
-    _snack('Failed to save: $e');
-  }
-}
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
 
-  Future<void> _saveLanguage(String lang) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language', lang);
-    if (mounted) setState(() => _selectedLanguage = lang);
-    _snack('Language set to $lang — restart to apply');
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'notificationPrefs': {
+          'newReports': _notifyNewReports,
+          'taskAssigned': _notifyTaskAssigned,
+          'taskCompleted': _notifyTaskCompleted,
+          'urgentOnly': _notifyUrgentOnly,
+        },
+      }, SetOptions(merge: true));
+    } catch (e) {
+      _snack('Failed to save: $e');
+    }
   }
 
   // ── Actions ───────────────────────────────────────────────────────────────
+
+  Future<void> _makeCall(String number) async {
+    final Uri uri = Uri(scheme: 'tel', path: number);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        _snack('Could not launch dialer for $number');
+      }
+    } catch (e) {
+      _snack('Error: $e');
+    }
+  }
 
   Future<void> _openFeedbackEmail() async {
     final Uri uri = Uri(
@@ -152,7 +139,6 @@ class _SettingsPageState extends State<SettingsPage>
     );
 
     try {
-      // try launching directly without canLaunchUrl check
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
       _snack('No email app found. Contact support@reliefnet.app');
@@ -168,12 +154,11 @@ class _SettingsPageState extends State<SettingsPage>
     );
     if (confirm != true) return;
     final prefs = await SharedPreferences.getInstance();
-    // preserve theme + language
     final theme = prefs.getString('theme');
-    final language = prefs.getString('language');
+    final language = prefs.getString('language_code');
     await prefs.clear();
     if (theme != null) await prefs.setString('theme', theme);
-    if (language != null) await prefs.setString('language', language);
+    if (language != null) await prefs.setString('language_code', language);
     _snack('Cache cleared');
   }
 
@@ -252,22 +237,55 @@ class _SettingsPageState extends State<SettingsPage>
       return const Center(child: CircularProgressIndicator());
     }
 
-    // ── Replace with your actual ThemeProvider consumer ───────────────────
-    // final themeProvider = context.watch<ThemeProvider>();
-    // final isDark = themeProvider.isDark;
-    // final onThemeToggle = themeProvider.toggle;
-    //
-    // For now wired to a placeholder — swap these two lines:
+    final l10n = AppLocalizations.of(context)!;
     final themeProvider = context.watch<ThemeProvider>();
+    final localeProvider = context.watch<LocaleProvider>();
     final isDark = themeProvider.isDarkMode;
     final onThemeToggle = themeProvider.toggleTheme;
 
-    return ListView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
-      children: [
+    String currentLangName = 'English';
+    if (localeProvider.locale.languageCode == 'hi') currentLangName = 'हिन्दी';
+    if (localeProvider.locale.languageCode == 'pa') currentLangName = 'ਪੰਜਾਬੀ';
+
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: ListView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+        children: [
+        // ── Emergency Hotlines ──────────────────────────────────────────
+        _SectionLabel(label: l10n.emergency_hotlines),
+        const SizedBox(height: 10),
+        _SettingsCard(
+          children: [
+            _TapTile(
+              icon: Icons.local_police_outlined,
+              iconColor: Colors.blue.shade800,
+              label: l10n.police,
+              subtitle: '100',
+              onTap: () => _makeCall('100'),
+            ),
+            _TapTile(
+              icon: Icons.medical_services_outlined,
+              iconColor: Colors.red.shade700,
+              label: l10n.ambulance,
+              subtitle: '102',
+              onTap: () => _makeCall('102'),
+            ),
+            _TapTile(
+              icon: Icons.local_fire_department_outlined,
+              iconColor: Colors.orange.shade800,
+              label: l10n.fire_brigade,
+              subtitle: '101',
+              onTap: () => _makeCall('101'),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 24),
+
         // ── Appearance ─────────────────────────────────────────────────
-        _SectionLabel(label: 'Appearance'),
+        _SectionLabel(label: l10n.appearance),
         const SizedBox(height: 10),
         _SettingsCard(
           children: [
@@ -276,25 +294,25 @@ class _SettingsPageState extends State<SettingsPage>
                   ? Icons.dark_mode_outlined
                   : Icons.light_mode_outlined,
               iconColor: const Color(0xFF6366F1),
-              label: 'Dark Mode',
+              label: l10n.dark_mode,
               subtitle: isDark ? 'Currently dark' : 'Currently light',
               value: isDark,
               onChanged: (_) => onThemeToggle(),
             ),
           ],
         ),
-    
+
         const SizedBox(height: 24),
-    
+
         // ── Notifications ───────────────────────────────────────────────
-        _SectionLabel(label: 'Notifications'),
+        _SectionLabel(label: l10n.notifications),
         const SizedBox(height: 10),
         _SettingsCard(
           children: [
             _SwitchTile(
               icon: Icons.fiber_new_outlined,
               iconColor: const Color(0xFF22C55E),
-              label: 'New Reports',
+              label: l10n.new_reports,
               subtitle: 'Alert when a new report\nis filed',
               value: _notifyNewReports,
               loading: _savingNotifs,
@@ -303,11 +321,10 @@ class _SettingsPageState extends State<SettingsPage>
                 _saveNotifPref('newReports', v);
               },
             ),
-            // _Divider(),
             _SwitchTile(
               icon: Icons.handshake_outlined,
               iconColor: const Color(0xFFF59E0B),
-              label: 'Task Assigned',
+              label: l10n.task_assigned,
               subtitle: 'Alert when a task is\nassigned to you',
               value: _notifyTaskAssigned,
               loading: _savingNotifs,
@@ -316,11 +333,10 @@ class _SettingsPageState extends State<SettingsPage>
                 _saveNotifPref('taskAssigned', v);
               },
             ),
-            // _Divider(),
             _SwitchTile(
               icon: Icons.check_circle_outline,
               iconColor: const Color(0xFF22C55E),
-              label: 'Task Completed',
+              label: l10n.task_completed,
               subtitle: 'Alert when a task you\nfiled is resolved',
               value: _notifyTaskCompleted,
               loading: _savingNotifs,
@@ -329,11 +345,10 @@ class _SettingsPageState extends State<SettingsPage>
                 _saveNotifPref('taskCompleted', v);
               },
             ),
-            // _Divider(),
             _SwitchTile(
               icon: Icons.priority_high_rounded,
               iconColor: const Color(0xFFEF4444),
-              label: 'Urgent Only',
+              label: l10n.urgent_only,
               subtitle: 'Only notify for High\nurgency reports',
               value: _notifyUrgentOnly,
               loading: _savingNotifs,
@@ -344,23 +359,23 @@ class _SettingsPageState extends State<SettingsPage>
             ),
           ],
         ),
-    
+
         const SizedBox(height: 24),
-    
+
         // ── Language / Region ───────────────────────────────────────────
-        _SectionLabel(label: 'Language & Region'),
+        _SectionLabel(label: l10n.language_region),
         const SizedBox(height: 10),
         _SettingsCard(
           children: [
             _TapTile(
               icon: Icons.language_outlined,
               iconColor: const Color(0xFF06B6D4),
-              label: 'Language',
+              label: l10n.language,
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _selectedLanguage,
+                    currentLangName,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(width: 4),
@@ -371,72 +386,70 @@ class _SettingsPageState extends State<SettingsPage>
                   ),
                 ],
               ),
-              onTap: () => _showLanguagePicker(),
+              onTap: () => _showLanguagePicker(localeProvider, l10n),
             ),
           ],
         ),
-    
+
         const SizedBox(height: 24),
-    
+
         // ── Privacy & Data ──────────────────────────────────────────────
-        _SectionLabel(label: 'Privacy & Data'),
+        _SectionLabel(label: l10n.privacy_data),
         const SizedBox(height: 10),
         _SettingsCard(
           children: [
             _TapTile(
               icon: Icons.policy_outlined,
               iconColor: const Color(0xFF8B5CF6),
-              label: 'Privacy Policy',
+              label: l10n.privacy_policy,
               onTap: _showPrivacyPolicy,
             ),
-            // _Divider(),
             _TapTile(
               icon: Icons.cleaning_services_outlined,
               iconColor: const Color(0xFF6366F1),
-              label: 'Clear Cache',
+              label: l10n.clear_cache,
               subtitle: 'Free up local storage',
               onTap: _clearCache,
             ),
-            // _Divider(),
             _TapTile(
               icon: Icons.delete_forever_outlined,
               iconColor: Colors.red,
-              label: 'Delete Account',
+              label: l10n.delete_account,
               subtitle: 'Permanently remove your data',
               labelColor: Colors.red,
               onTap: _showDeleteAccountDialog,
             ),
           ],
         ),
-    
+
         const SizedBox(height: 24),
-    
+
         // ── Help & Feedback ─────────────────────────────────────────────
-        _SectionLabel(label: 'Help & Feedback'),
+        _SectionLabel(label: l10n.help_feedback),
         const SizedBox(height: 10),
         _SettingsCard(
           children: [
             _TapTile(
               icon: Icons.mail_outline_rounded,
               iconColor: const Color(0xFFF59E0B),
-              label: 'Send Feedback',
+              label: l10n.send_feedback,
               subtitle: 'support@reliefnet.app',
               onTap: _openFeedbackEmail,
             ),
           ],
         ),
-    
+
         const SizedBox(height: 24),
-    
+
         // ── About ───────────────────────────────────────────────────────
-        _SectionLabel(label: 'About'),
+        _SectionLabel(label: l10n.about),
         const SizedBox(height: 10),
         _SettingsCard(
           children: [
             _TapTile(
               icon: Icons.info_outline_rounded,
               iconColor: const Color(0xFF06B6D4),
-              label: 'App Version',
+              label: l10n.app_version,
               trailing: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -445,7 +458,7 @@ class _SettingsPageState extends State<SettingsPage>
                 decoration: BoxDecoration(
                   color: Theme.of(
                     context,
-                  ).colorScheme.primary.withOpacity(0.1),
+                  ).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -459,18 +472,17 @@ class _SettingsPageState extends State<SettingsPage>
               ),
               onTap: null,
             ),
-            // _Divider(),
             _TapTile(
               icon: Icons.favorite_outline_rounded,
               iconColor: Colors.red,
-              label: 'Built for Google Solution Challenge',
+              label: l10n.built_for_gsc,
               onTap: () => _showProjectDetails(context),
             ),
           ],
         ),
-    
+
         const SizedBox(height: 32),
-    
+
         // ── Footer ──────────────────────────────────────────────────────
         Center(
           child: Text(
@@ -482,12 +494,11 @@ class _SettingsPageState extends State<SettingsPage>
           ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 
-  // ── Language picker ───────────────────────────────────────────────────────
-
-  void _showLanguagePicker() {
+  void _showLanguagePicker(LocaleProvider provider, AppLocalizations l10n) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -502,53 +513,49 @@ class _SettingsPageState extends State<SettingsPage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Drag handle
               Container(
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.4),
+                  color: Colors.grey.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(height: 16),
               Text(
-                'Select Language',
+                l10n.select_language,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 12),
-              ..._languages.map(
-                (lang) => ListTile(
-                  title: Text(lang, style: theme.textTheme.bodyMedium),
-                  trailing: _selectedLanguage == lang
-                      ? Icon(
-                          Icons.check_rounded,
-                          color: theme.colorScheme.primary,
-                        )
-                      : null,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _saveLanguage(lang);
-                  },
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
+              _langTile(ctx, provider, 'English', const Locale('en')),
+              _langTile(ctx, provider, 'हिन्दी', const Locale('hi')),
+              _langTile(ctx, provider, 'ਪੰਜਾਬੀ', const Locale('pa')),
             ],
           ),
         );
       },
     );
   }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Privacy Policy Sheet
-// ─────────────────────────────────────────────────────────────────────────────
+  Widget _langTile(BuildContext ctx, LocaleProvider provider, String name, Locale locale) {
+    final theme = Theme.of(ctx);
+    final isSelected = provider.locale.languageCode == locale.languageCode;
+    return ListTile(
+      title: Text(name, style: theme.textTheme.bodyMedium),
+      trailing: isSelected
+          ? Icon(Icons.check_rounded, color: theme.colorScheme.primary)
+          : null,
+      onTap: () {
+        provider.setLocale(locale);
+        Navigator.pop(ctx);
+      },
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    );
+  }
+}
 
 class _PrivacyPolicySheet extends StatelessWidget {
   const _PrivacyPolicySheet();
@@ -572,7 +579,7 @@ class _PrivacyPolicySheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.4),
+                color: Colors.grey.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -632,9 +639,6 @@ class _PrivacyPolicySheet extends StatelessWidget {
     );
   }
 }
-// ─────────────────────────────────────────────────────────────────────────────
-// Project Details Sheet
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _ProjectDetailsSheet extends StatelessWidget {
   const _ProjectDetailsSheet();
@@ -695,7 +699,6 @@ class _ProjectDetailsSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            // Replace with your actual names
             _buildInfoRow(Icons.person_outline, "Ramandeep Singh"),
             _buildInfoRow(Icons.person_outline, "Japneet Singh"),
             _buildInfoRow(Icons.person_outline, "Member Name 3"),
@@ -749,7 +752,7 @@ class _ProjectDetailsSheet extends StatelessWidget {
   ) {
     return Card(
       elevation: 0,
-      color: theme.colorScheme.primary.withOpacity(0.05),
+      color: theme.colorScheme.primary.withValues(alpha: 0.05),
       child: ListTile(
         leading: Icon(icon, color: theme.colorScheme.primary),
         title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -790,10 +793,6 @@ class _PolicySection extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shared small widgets
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel({required this.label});
   final String label;
@@ -825,7 +824,7 @@ class _SettingsCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withOpacity(0.05),
+            color: theme.shadowColor.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -859,7 +858,6 @@ class _SwitchTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    // Use StatefulBuilder to keep the "flicker" contained to just this tile
     return StatefulBuilder(
       builder: (context, setLocalState) {
         return Padding(
@@ -869,7 +867,7 @@ class _SwitchTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.12),
+                  color: iconColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: iconColor, size: 18),
@@ -890,9 +888,7 @@ class _SwitchTile extends StatelessWidget {
                   : Switch.adaptive(
                       value: value,
                       onChanged: (newValue) {
-                        // 1. Update the UI immediately and locally
-                        setLocalState(() {}); 
-                        // 2. Trigger the Firebase save logic
+                        setLocalState(() {});
                         onChanged(newValue);
                       },
                     ),
@@ -903,6 +899,7 @@ class _SwitchTile extends StatelessWidget {
     );
   }
 }
+
 class _TapTile extends StatelessWidget {
   const _TapTile({
     required this.icon,
@@ -931,7 +928,7 @@ class _TapTile extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.12),
+          color: iconColor.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: iconColor, size: 18),
