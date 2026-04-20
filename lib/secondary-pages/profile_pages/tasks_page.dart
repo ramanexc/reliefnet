@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'shared_profile_widgets.dart';
 
 /// Which subset of tasks to show.
 enum TasksFilter { accepted, completed }
@@ -153,9 +154,9 @@ class _TasksPageState extends State<TasksPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-          ? _ErrorState(message: _error!)
-          : _tasks.isEmpty
-          ? _EmptyState(
+              ? ErrorState(message: _error!)
+              : _tasks.isEmpty
+          ? EmptyState(
               icon: widget.filter == TasksFilter.accepted
                   ? Icons.handshake_outlined
                   : Icons.check_circle_outline,
@@ -183,7 +184,7 @@ class _TasksPageState extends State<TasksPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: theme.shadowColor.withOpacity(0.05),
+                          color: theme.shadowColor.withValues(alpha: 0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -200,7 +201,7 @@ class _TasksPageState extends State<TasksPage> {
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: theme.colorScheme.primary
-                                      .withOpacity(0.1),
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
@@ -236,13 +237,13 @@ class _TasksPageState extends State<TasksPage> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: _urgencyColor(urgency).withOpacity(
-                                    0.1,
+                                  color: _urgencyColor(urgency).withValues(
+                                    alpha: 0.1,
                                   ),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: _urgencyColor(urgency).withOpacity(
-                                      0.3,
+                                    color: _urgencyColor(urgency).withValues(
+                                      alpha: 0.3,
                                     ),
                                   ),
                                 ),
@@ -283,7 +284,7 @@ class _TasksPageState extends State<TasksPage> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: _statusColor(status).withOpacity(0.1),
+                                  color: _statusColor(status).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Row(
@@ -326,72 +327,6 @@ class _TasksPageState extends State<TasksPage> {
                 },
               ),
             ),
-    );
-  }
-}
-class _ErrorState extends StatelessWidget {
-  final String message;
-  const _ErrorState({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    // Removed padding from Center and wrapped Column in Padding instead
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24), 
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 48),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
-                // This is a nice-to-have: it allows the user to retry
-                // You can pass a callback here if you want it to work!
-              }, 
-              child: const Text('Try Again'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _EmptyState({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 64, color: theme.colorScheme.primary.withOpacity(0.4)),
-            const SizedBox(height: 16),
-            Text(title, style: theme.textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

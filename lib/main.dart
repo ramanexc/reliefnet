@@ -11,6 +11,8 @@ import 'package:reliefnet/login-signup/login_page.dart';
 import 'package:reliefnet/themes/theme_light.dart';
 import 'package:reliefnet/themes/theme_dark.dart';
 import 'package:reliefnet/themes/theme_provider.dart';
+import 'package:reliefnet/themes/locale_provider.dart';
+import 'package:reliefnet/l10n/app_localizations.dart';
 
 Future<void> main() async {
   // Ensure native bindings are ready
@@ -19,11 +21,18 @@ Future<void> main() async {
   // Initialize Firebase
   await Firebase.initializeApp();
 
-  // Create the provider instance and trigger the internal load
+  // Create the provider instances
   final themeProvider = ThemeProvider();
+  final localeProvider = LocaleProvider();
 
   runApp(
-    ChangeNotifierProvider(create: (_) => themeProvider, child: const MyApp()),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => themeProvider),
+        ChangeNotifierProvider(create: (_) => localeProvider),
+      ],
+      child: const MyApp(),
+    ),
   );
 }
 
@@ -32,11 +41,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to the provider for theme changes
+    // Listen to the providers
     final themeProvider = context.watch<ThemeProvider>();
+    final localeProvider = context.watch<LocaleProvider>();
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      locale: localeProvider.locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
 
       /// THEMES
       theme: lightmode,

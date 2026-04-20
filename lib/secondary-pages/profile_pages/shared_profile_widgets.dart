@@ -6,8 +6,9 @@
 
 import 'package:flutter/material.dart';
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({
+class EmptyState extends StatelessWidget {
+  const EmptyState({
+    super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -59,8 +60,8 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message});
+class ErrorState extends StatelessWidget {
+  const ErrorState({super.key, required this.message});
   final String message;
 
   @override
