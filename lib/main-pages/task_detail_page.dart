@@ -28,12 +28,7 @@ class TaskDetailPage extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (snapshot.hasError) {
-          return Scaffold(
-            body: Center(child: Text("Error: ${snapshot.error}")),
-          );
-        }
-        if (!snapshot.hasData || !snapshot.data!.exists) {
+        if (!snapshot.hasData || snapshot.hasError) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
@@ -200,13 +195,11 @@ class _ActiveDetailPageState extends State<_ActiveDetailPage> {
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      final targetLat = lat is num ? lat.toDouble() : double.tryParse(lat.toString()) ?? 0.0;
-      final targetLng = lng is num ? lng.toDouble() : double.tryParse(lng.toString()) ?? 0.0;
       final distMeters = _haversineDistance(
         pos.latitude,
         pos.longitude,
-        targetLat,
-        targetLng,
+        (lat as num).toDouble(),
+        (lng as num).toDouble(),
       );
 
       setState(() => _locationChecking = false);
@@ -226,12 +219,10 @@ class _ActiveDetailPageState extends State<_ActiveDetailPage> {
                 children: [
                   const Icon(Icons.location_on, color: Colors.white),
                   const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      distMeters < 1000
-                          ? "Location verified! ${distMeters.round()}m from the site."
-                          : "Location verified! You're at the site.",
-                    ),
+                  Text(
+                    distMeters < 1000
+                        ? "Location verified! ${distMeters.round()}m from the site."
+                        : "Location verified! You're at the site.",
                   ),
                 ],
               ),
@@ -565,17 +556,7 @@ class _ActiveDetailPageState extends State<_ActiveDetailPage> {
     final status = data['status'] ?? 'assigned';
     final lat = data['lat'];
     final lng = data['lng'];
-    String address = '';
-    if (data['address'] != null && data['address'] is String) {
-      address = data['address'];
-    } else if (data['location'] != null) {
-      final loc = data['location'];
-      if (loc is GeoPoint) {
-        address = "Lat: ${loc.latitude}, Lng: ${loc.longitude}";
-      } else if (loc is String) {
-        address = loc;
-      }
-    }
+    final address = data['address'] ?? data['location'] ?? '';
     // FIX: show username/name not UID
     final reporterName =
         data['reporterName'] ??
@@ -690,7 +671,7 @@ class _ActiveDetailPageState extends State<_ActiveDetailPage> {
                             const SizedBox(height: 4),
                           ],
                           Text(
-                            "${(lat is num ? lat : double.tryParse(lat.toString()) ?? 0.0).toStringAsFixed(5)}, ${(lng is num ? lng : double.tryParse(lng.toString()) ?? 0.0).toStringAsFixed(5)}",
+                            "${(lat as num).toStringAsFixed(5)}, ${(lng as num).toStringAsFixed(5)}",
                             style: TextStyle(
                               color: Colors.grey.shade500,
                               fontSize: 12,
