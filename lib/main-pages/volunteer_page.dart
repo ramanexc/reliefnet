@@ -13,41 +13,59 @@ class VolunteerPage extends StatelessWidget {
       return const Center(child: Text("Please login"));
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
         appBar: AppBar(
-          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-          foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
           elevation: 0,
-          scrolledUnderElevation: 0,
-          // 1. Force the shape to have a transparent side to kill any shadow/line
-          shape: const RoundedRectangleBorder(
-            side: BorderSide(color: Colors.transparent, width: 0),
-          ),
-          title: Container(
-            // 2. Ensure the container holding the TabBar doesn't have a bottom border
-            decoration: const BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Colors.transparent, width: 0),
-              ),
+          centerTitle: true,
+          title: Text(
+            "My Tasks",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
             ),
-            child: TabBar(
-              // 3. dividerColor: Colors.transparent is the magic fix for modern Flutter!
-              // This removes the thin line that runs along the bottom of the TabBar.
-              dividerColor: Colors.transparent,
-
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              indicatorColor: Colors.white,
-              indicatorWeight: 3,
-              labelPadding: EdgeInsets.zero,
-              // ... keep your existing styles
-              tabs: const [
-                Tab(text: "Active"),
-                Tab(text: "Completed"),
-                Tab(text: "Rejected"),
-              ],
+          ),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(60),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TabBar(
+                dividerColor: Colors.transparent,
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: isDark ? const Color(0xFF334155) : Colors.white,
+                  boxShadow: [
+                    if (!isDark)
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                  ],
+                ),
+                labelColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                unselectedLabelColor: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                tabs: const [
+                  Tab(text: "Active"),
+                  Tab(text: "Completed"),
+                  Tab(text: "Rejected"),
+                ],
+              ),
             ),
           ),
         ),
@@ -170,191 +188,246 @@ class _TaskCard extends StatelessWidget {
     final issue = data['issueType'] ?? 'Unknown';
     final description = data['description'] ?? '';
     final status = data['status'] ?? 'assigned';
+    final timestamp = data['timestamp'] as Timestamp?;
     String address = '';
 
     if (data['address'] != null && data['address'] is String) {
       address = data['address'];
     } else if (data['location'] != null) {
       final loc = data['location'];
-
       if (loc is GeoPoint) {
-        address = "Lat: ${loc.latitude}, Lng: ${loc.longitude}";
+        address = "Lat: ${loc.latitude.toStringAsFixed(4)}, Lng: ${loc.longitude.toStringAsFixed(4)}";
       } else if (loc is String) {
         address = loc;
       }
     }
+
     final color = _issueColor(issue);
     final icon = _issueIcon(issue);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final statusMap = {
-      'assigned': (Colors.blue.shade600, 'Assigned'),
-      'in_progress': (Colors.orange.shade700, 'En Route'),
-      'reached': (Colors.purple.shade600, 'On Site'),
-      'completed': (Colors.green.shade600, 'Completed'),
-      'rejected': (Colors.red.shade600, 'Declined'),
+      'assigned': (const Color(0xFF3B82F6), 'Assigned', Icons.assignment_ind_rounded),
+      'in_progress': (const Color(0xFFF59E0B), 'En Route', Icons.directions_run_rounded),
+      'reached': (const Color(0xFF8B5CF6), 'On Site', Icons.location_on_rounded),
+      'completed': (const Color(0xFF10B981), 'Completed', Icons.check_circle_rounded),
+      'rejected': (const Color(0xFFEF4444), 'Declined', Icons.cancel_rounded),
     };
-    final statusEntry = statusMap[status] ?? (Colors.grey.shade600, 'Unknown');
+    final statusEntry = statusMap[status] ?? (Colors.grey.shade600, 'Unknown', Icons.help_outline_rounded);
 
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => TaskDetailPage(docId: doc.id)),
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.25 : 0.07),
-              blurRadius: 12,
-              offset: const Offset(0, 3),
-            ),
-          ],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1),
         ),
-        child: IntrinsicHeight(
-          child: Row(
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => TaskDetailPage(docId: doc.id)),
+          ),
+          borderRadius: BorderRadius.circular(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Left accent strip
-              Container(
-                width: 5,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [color, color.withOpacity(0.4)],
-                  ),
+              // Header Section with Issue Icon and Status
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(icon, color: color, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            issue,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          if (timestamp != null)
+                            Text(
+                              _formatDate(timestamp.toDate()),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    _StatusBadge(
+                      label: statusEntry.$2,
+                      color: statusEntry.$1,
+                      icon: statusEntry.$3,
+                    ),
+                  ],
                 ),
               ),
-              // Card content
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top row: icon + issue + status badge
+
+              // Divider
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.05),
+              ),
+
+              // Content Section
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (description.isNotEmpty) ...[
+                      Text(
+                        description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    
+                    if (address.isNotEmpty)
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: color.withOpacity(isDark ? 0.2 : 0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(icon, color: color, size: 20),
+                          Icon(
+                            Icons.map_rounded,
+                            size: 16,
+                            color: isDark ? Colors.blue.shade400 : Colors.blue.shade600,
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              issue,
+                              address,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: isDark
-                                    ? Colors.white
-                                    : const Color(0xFF0F172A),
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusEntry.$1.withOpacity(
-                                isDark ? 0.2 : 0.1,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              statusEntry.$2,
-                              style: TextStyle(
-                                color: statusEntry.$1,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF1E293B),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      if (description.isNotEmpty) ...[
-                        const SizedBox(height: 10),
+                  ],
+                ),
+              ),
+
+              // Footer Section
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.black.withValues(alpha: 0.1) : Colors.grey.shade50,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "TASK ID: ${doc.id.substring(0, 8).toUpperCase()}",
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    Row(
+                      children: [
                         Text(
-                          description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          "Details",
                           style: TextStyle(
                             fontSize: 13,
-                            height: 1.5,
-                            color: isDark
-                                ? const Color(0xFFCBD5E1)
-                                : const Color(0xFF64748B),
+                            fontWeight: FontWeight.bold,
+                            color: color,
                           ),
                         ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.arrow_forward_rounded, size: 14, color: color),
                       ],
-                      if (address.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on_outlined,
-                              size: 13,
-                              color: isDark
-                                  ? const Color(0xFF94A3B8)
-                                  : Colors.grey.shade500,
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                address,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isDark
-                                      ? const Color(0xFF94A3B8)
-                                      : Colors.grey.shade500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 10),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              "View Details",
-                              style: TextStyle(
-                                color: color,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.arrow_forward_rounded,
-                              size: 15,
-                              color: color,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inDays == 0) return "Today";
+    if (diff.inDays == 1) return "Yesterday";
+    return "${date.day}/${date.month}/${date.year}";
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData icon;
+  const _StatusBadge({required this.label, required this.color, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
       ),
     );
   }

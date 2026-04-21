@@ -431,7 +431,12 @@ class _ReportDetailSheet extends StatelessWidget {
       });
       if (context.mounted) {
         Navigator.pop(context);
-        Navigator.pushNamed(context, '/volunteer', arguments: docId);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Task accepted successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));

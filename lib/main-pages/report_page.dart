@@ -25,6 +25,19 @@ class _ReportPageState extends State<ReportPage> {
   String? _urgency;
   String _description = '';
   bool _isSubmitting = false;
+  final _descController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _descController.dispose();
+    super.dispose();
+  }
+
 
   String _locationText = '';
   double? _latitude;
@@ -36,6 +49,30 @@ class _ReportPageState extends State<ReportPage> {
 
   final List<String> _issueTypes = ['Food', 'Medical', 'Shelter', 'Other'];
   final List<String> _urgencyLevels = ['Low', 'Medium', 'High'];
+
+  bool _isAnalyzing = false;
+  Map<String, dynamic>? _liveAiSummary;
+
+  Future<void> _generateLiveSummary() async {
+    if (_issueType == null || _urgency == null || _descController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select type, urgency, and enter a description first')),
+      );
+      return;
+    }
+
+    setState(() => _isAnalyzing = true);
+    try {
+      final summary = await GeminiService.analyzeReport(
+        issueType: _issueType!,
+        urgency: _urgency!,
+        description: _descController.text,
+      );
+      setState(() => _liveAiSummary = summary);
+    } finally {
+      setState(() => _isAnalyzing = false);
+    }
+  }
 
   Color _getUrgencyColor(String urgency) {
     switch (urgency) {
@@ -107,7 +144,7 @@ class _ReportPageState extends State<ReportPage> {
 
     final submittedType = _issueType!;
     final submittedUrgency = _urgency!;
-    final submittedDesc = _description;
+    final submittedDesc = _descController.text;
     final submittedLat = _latitude!;
     final submittedLng = _longitude!;
 
@@ -136,26 +173,35 @@ class _ReportPageState extends State<ReportPage> {
       });
 
       // Step 2: Call Gemini
+      print('DEBUG: Requesting AI Summary for: $submittedType');
       final aiSummary = await GeminiService.analyzeReport(
         issueType: submittedType,
         urgency: submittedUrgency,
         description: submittedDesc,
       );
+      print('DEBUG: AI Summary result: ${aiSummary != null ? "Success" : "Failed (null)"}');
 
       // Step 3: Write AI summary back
       if (aiSummary != null) {
-        await docRef.update({'aiSummary': aiSummary});
+        try {
+          await docRef.update({'aiSummary': aiSummary});
+        } catch (e) {
+          print('DEBUG: Failed to update Firestore with AI summary: $e');
+        }
       }
 
       if (mounted) {
         _formKey.currentState!.reset();
+        _descController.clear();
         setState(() {
           _issueType = null;
           _urgency = null;
+          _description = '';
           _locationText = '';
           _latitude = null;
           _longitude = null;
           _mediaFiles.clear();
+          _liveAiSummary = null;
         });
 
         _showConfirmation(
@@ -445,12 +491,52 @@ class _ReportPageState extends State<ReportPage> {
             _FieldLabel(label: 'Description', icon: Icons.description_outlined),
             const SizedBox(height: 8),
             TextFormField(
+              controller: _descController,
               style: textTheme.bodyMedium,
               maxLines: 4,
               decoration: const InputDecoration(hintText: 'Describe the situation in detail...', alignLabelWithHint: true),
               validator: (val) => val == null || val.isEmpty ? 'Please enter a description' : null,
+              onChanged: (val) {
+                _description = val;
+              },
               onSaved: (val) => _description = val!,
             ),
+
+            const SizedBox(height: 16),
+
+            // AI Preview Section
+            if (_liveAiSummary != null || _isAnalyzing) ...[
+              const SizedBox(height: 12),
+              if (_isAnalyzing)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 12),
+                        Text('AI is analyzing your report...', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+                )
+              else if (_liveAiSummary != null)
+                AiSummaryCard(aiSummary: _liveAiSummary!),
+              const SizedBox(height: 12),
+            ],
+
+            Center(
+              child: TextButton.icon(
+                onPressed: _isAnalyzing ? null : _generateLiveSummary,
+                icon: const Icon(Icons.auto_awesome),
+                label: Text(_liveAiSummary == null ? 'Get AI Analysis Preview' : 'Refresh AI Analysis'),
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+              ),
+            ),
+
             const SizedBox(height: 32),
 
             SizedBox(

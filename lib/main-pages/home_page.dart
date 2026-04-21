@@ -785,47 +785,140 @@ class _PendingTaskCard extends StatelessWidget {
 
   Color _urgencyColor(String u) {
     switch (u.toLowerCase()) {
-      case 'high': return Colors.red;
-      case 'medium': return Colors.orange;
-      default: return Colors.green;
+      case 'high':
+        return const Color(0xFFEF4444);
+      case 'medium':
+        return const Color(0xFFF59E0B);
+      default:
+        return const Color(0xFF10B981);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      color: isDark ? Colors.green.withOpacity(0.1) : Colors.green.shade50,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: Colors.green.shade200),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        leading: CircleAvatar(
-          backgroundColor: Colors.green.shade100,
-          child: const Icon(Icons.assignment_rounded, color: Colors.green, size: 22),
-        ),
-        title: Text(issue, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Container(
-          margin: const EdgeInsets.only(top: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: _urgencyColor(urgency).withOpacity(0.15),
-            borderRadius: BorderRadius.circular(6),
+    final uColor = _urgencyColor(urgency);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: Text(
-            urgency,
-            style: TextStyle(
-              fontSize: 11,
-              color: _urgencyColor(urgency),
-              fontWeight: FontWeight.bold,
+        ],
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                // Icon Container
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [uColor.withValues(alpha: 0.2), uColor.withValues(alpha: 0.05)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.assignment_late_rounded, color: uColor, size: 28),
+                ),
+                const SizedBox(width: 16),
+
+                // Text Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              issue,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                          _UrgencyBadge(label: urgency, color: uColor),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.radio_button_checked_rounded,
+                            size: 14,
+                            color: isDark ? Colors.blue.shade400 : Colors.blue.shade600,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            status.replaceAll('_', ' ').toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.blue.shade400 : Colors.blue.shade600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: Colors.grey.withValues(alpha: 0.5),
+                ),
+              ],
             ),
           ),
         ),
-        trailing: const Icon(Icons.chevron_right_rounded),
+      ),
+    );
+  }
+}
+
+class _UrgencyBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _UrgencyBadge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: color,
+        ),
       ),
     );
   }

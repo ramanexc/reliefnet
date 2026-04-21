@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
-  static const _apiKey = 'Not-working';
+  static const _apiKey = 'AIzaSyAad2mVDrKfYzv2tqv3KYqET0KuHrYpDMw';
 
   static final _model = GenerativeModel(
-    model: 'gemini-1.5-flash',
+    // Following 2026 "Free & Fast" standard request
+    model: 'gemini-3.1-flash-lite-preview',
     apiKey: _apiKey,
   );
 
@@ -36,14 +37,24 @@ Keep solutions practical and specific to the issue type. Keep each skillset item
 ''';
 
     try {
+      print('DEBUG: Sending prompt to Gemini: $prompt');
       final response = await _model.generateContent([Content.text(prompt)]);
       final text = response.text ?? '';
-      final clean = text
-          .replaceAll('```json', '')
-          .replaceAll('```', '')
-          .trim();
-      final decoded = jsonDecode(clean) as Map<String, dynamic>;
-      return decoded;
+      print('DEBUG: Gemini raw response: $text');
+      
+      // Attempt to extract JSON from the response
+      final jsonStartIndex = text.indexOf('{');
+      final jsonEndIndex = text.lastIndexOf('}');
+      
+      if (jsonStartIndex != -1 && jsonEndIndex != -1) {
+        final jsonString = text.substring(jsonStartIndex, jsonEndIndex + 1);
+        final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+        print('DEBUG: Gemini decoded JSON: $decoded');
+        return decoded;
+      }
+      
+      print('DEBUG: Gemini response did not contain valid JSON block');
+      return null;
     } catch (e) {
       print('GEMINI ERROR: $e');
       return null;
