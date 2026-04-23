@@ -93,6 +93,148 @@ class _NearbyHospitalsPageState extends State<NearbyHospitalsPage> {
     }
   }
 
+  Future<void> _makeCall(String phoneNumber) async {
+    if (phoneNumber == 'N/A') return;
+    final url = 'tel:${phoneNumber.replaceAll(RegExp(r'[^\d+]'), '')}';
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
+    }
+  }
+
+  void _showHospitalDetails(Map<String, dynamic> hospital) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hospital['name'] ?? "Hospital",
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        hospital['address'] ?? "",
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.local_hospital, color: Colors.red),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            // Static Map Preview
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                height: 150,
+                width: double.infinity,
+                color: Colors.grey.withOpacity(0.1),
+                child: Image.network(
+                  "https://maps.googleapis.com/maps/api/staticmap?center=${hospital['lat']},${hospital['lng']}&zoom=15&size=600x300&markers=color:red%7C${hospital['lat']},${hospital['lng']}&key=${const String.fromEnvironment('GOOGLE_API_KEY')}",
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Center(
+                    child: Icon(Icons.map_outlined, color: Colors.grey, size: 40),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                _buildInfoChip(Icons.star, Colors.amber, "${hospital['rating']} Rating"),
+                const SizedBox(width: 12),
+                _buildInfoChip(Icons.directions_walk, Colors.blue, "${hospital['distance']} km away"),
+              ],
+            ),
+            const Spacer(),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: hospital['phone'] != 'N/A' ? () => _makeCall(hospital['phone']) : null,
+                    icon: const Icon(Icons.phone),
+                    label: const Text("Call"),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => _launchDirections(hospital['name'] ?? '', hospital['address'] ?? ''),
+                    icon: const Icon(Icons.directions),
+                    label: const Text("Navigate"),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoChip(IconData icon, Color color, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -176,73 +318,78 @@ class _NearbyHospitalsPageState extends State<NearbyHospitalsPage> {
                             itemCount: _hospitals.length,
                             itemBuilder: (context, index) {
                               final hospital = _hospitals[index];
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  side: BorderSide(color: Colors.grey.withOpacity(0.15)),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(12),
+                              return InkWell(
+                                onTap: () => _showHospitalDetails(hospital),
+                                borderRadius: BorderRadius.circular(16),
+                                child: Card(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    side: BorderSide(color: Colors.grey.withOpacity(0.15)),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: const Icon(Icons.local_hospital, color: Colors.red),
                                         ),
-                                        child: const Icon(Icons.local_hospital, color: Colors.red),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              hospital['name'] ?? "Unknown Hospital",
-                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              hospital['address'] ?? "Address not available",
-                                              style: textTheme.bodySmall?.copyWith(fontSize: 11),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Row(
-                                              children: [
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.blue.withOpacity(0.1),
-                                                    borderRadius: BorderRadius.circular(4),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                hospital['name'] ?? "Unknown Hospital",
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                hospital['address'] ?? "Address not available",
+                                                style: textTheme.bodySmall?.copyWith(fontSize: 11),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.blue.withOpacity(0.1),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: Text(
+                                                      "${hospital['distance']} km",
+                                                      style: const TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.bold),
+                                                    ),
                                                   ),
-                                                  child: Text(
-                                                    "${hospital['distance']} km",
-                                                    style: const TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.bold),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                const Icon(Icons.star, size: 12, color: Colors.amber),
-                                                Text(" ${hospital['rating']}", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                                              ],
+                                                  const SizedBox(width: 8),
+                                                  const Icon(Icons.star, size: 12, color: Colors.amber),
+                                                  Text(" ${hospital['rating']}", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        if (hospital['phone'] != null && hospital['phone'] != 'N/A')
+                                          IconButton(
+                                            style: IconButton.styleFrom(
+                                              backgroundColor: Colors.green.withOpacity(0.1),
+                                              padding: const EdgeInsets.all(8),
                                             ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      IconButton(
-                                        style: IconButton.styleFrom(
-                                          backgroundColor: Colors.blue.withOpacity(0.1),
-                                          padding: const EdgeInsets.all(8),
-                                        ),
-                                        icon: const Icon(Icons.directions_rounded, color: Colors.blue, size: 20),
-                                        onPressed: () => _launchDirections(hospital['name'] ?? '', hospital['address'] ?? ''),
-                                      ),
-                                    ],
+                                            icon: const Icon(Icons.phone_rounded, color: Colors.green, size: 20),
+                                            onPressed: () => _makeCall(hospital['phone']),
+                                          ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );

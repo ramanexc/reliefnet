@@ -13,6 +13,7 @@ import 'package:reliefnet/themes/theme_dark.dart';
 import 'package:reliefnet/themes/theme_provider.dart';
 import 'package:reliefnet/themes/locale_provider.dart';
 import 'package:reliefnet/l10n/app_localizations.dart';
+import 'package:reliefnet/widgets/mahi_ai_assistant.dart';
 
 Future<void> main() async {
   // Ensure native bindings are ready
@@ -68,6 +69,16 @@ class MyApp extends StatelessWidget {
 
       /// AUTH HANDLER
       home: const AuthWrapper(),
+      builder: (context, child) {
+        return Scaffold(
+          body: Stack(
+            children: [
+              child!,
+              const MahiAiAssistant(),
+            ],
+          ),
+        );
+      },
     );
   }
 }

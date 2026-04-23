@@ -63,6 +63,12 @@ class GeminiService {
     return await _callGemini(prompt);
   }
 
+  // ── Mahi Chat Assistant ───────────────────────────────────────────────────
+
+  static Future<String?> mahiChat(String prompt) async {
+    return await _callGemini(prompt);
+  }
+
   // ── Per-report analysis ───────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>?> analyzeReport({
@@ -124,6 +130,7 @@ Keep solutions practical and specific to the issue type. Keep each skillset item
       double pLat,
       double pLng,
       dynamic rating,
+      String? phone,
     ) {
       final normalizedName = name.toLowerCase().trim();
       if (!seenNames.contains(normalizedName)) {
@@ -136,6 +143,9 @@ Keep solutions practical and specific to the issue type. Keep each skillset item
             'address': addr,
             'distance': distanceInKm.toStringAsFixed(1),
             'rating': rating?.toString() ?? '4.2',
+            'phone': phone ?? 'N/A',
+            'lat': pLat,
+            'lng': pLng,
           });
         }
       }
@@ -150,7 +160,7 @@ Keep solutions practical and specific to the issue type. Keep each skillset item
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': _apiKey,
         'X-Goog-FieldMask':
-            'places.displayName,places.formattedAddress,places.location,places.rating',
+            'places.displayName,places.formattedAddress,places.location,places.rating,places.internationalPhoneNumber',
       };
       final body = jsonEncode({
         'textQuery': 'hospitals and medical centers near $address',
@@ -178,6 +188,7 @@ Keep solutions practical and specific to the issue type. Keep each skillset item
               loc['latitude'],
               loc['longitude'],
               p['rating'],
+              p['internationalPhoneNumber'],
             );
           }
         }
@@ -209,7 +220,7 @@ Keep solutions practical and specific to the issue type. Keep each skillset item
     final prompt =
         '''
 Identify exactly 5 REAL, PHYSICALLY EXISTING hospitals or major 24/7 medical centers located within 7km of these coordinates: $lat, $lng (Location: $address).
-Return ONLY a valid JSON list of objects with these keys: "name", "address", "distance" (estimated km from user), "rating" (1-5).
+Return ONLY a valid JSON list of objects with these keys: "name", "address", "distance" (estimated km from user), "rating" (1-5), "phone", "lat", "lng".
 No explanation, no markdown, no backticks.
 ''';
 
