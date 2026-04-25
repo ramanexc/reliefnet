@@ -38,7 +38,7 @@ Every report is instantly analyzed by **Gemini AI** to surface urgency insights,
 
 Get the latest version of **ReliefNet APK**:
 
-👉 [Download Latest APK](https://github.com/ramanexc/reliefnet/releases/download/v1.0.0/app-release.apk)
+👉 [Download Latest APK](https://github.com/ReliefNet/ReliefNet/releases/download/v1.0.0/reliefnet-v1.0.0.apk)
 
 > ⚠️ Enable "Install from unknown sources" on your Android device before installing.
 
